@@ -266,7 +266,9 @@ func (ts *typeScriptLang) addSourceRules(cfg *JsGazelleConfig, args language.Gen
 	if hasPackageTarget {
 		// Add the primary source rule by default if it exists
 		var srcLabel *label.Label
-		if srcRule, hasDefaultLib := sourceRules[DefaultLibraryName]; hasDefaultLib {
+		var srcRule *rule.Rule
+		if r, hasDefaultLib := sourceRules[DefaultLibraryName]; hasDefaultLib {
+			srcRule = r
 			srcLabel = &label.Label{
 				Name:     srcRule.Name(),
 				Repo:     args.Config.RepoName,
@@ -275,11 +277,11 @@ func (ts *typeScriptLang) addSourceRules(cfg *JsGazelleConfig, args language.Gen
 			}
 		}
 
-		ts.addPackageRule(cfg, args, packageName, dataFiles, srcLabel, result)
+		ts.addPackageRule(cfg, args, packageName, dataFiles, srcLabel, srcRule, result)
 	}
 }
 
-func (ts *typeScriptLang) addPackageRule(cfg *JsGazelleConfig, args language.GenerateArgs, packageName string, dataFiles []string, srcLabel *label.Label, result *language.GenerateResult) {
+func (ts *typeScriptLang) addPackageRule(cfg *JsGazelleConfig, args language.GenerateArgs, packageName string, dataFiles []string, srcLabel *label.Label, srcRule *rule.Rule, result *language.GenerateResult) {
 	npmPackageInfo := newTsPackageInfo(srcLabel)
 
 	packageJsonPath := path.Join(args.Rel, NpmPackageFilename)
@@ -340,6 +342,24 @@ func (ts *typeScriptLang) addPackageRule(cfg *JsGazelleConfig, args language.Gen
 	npmPackage.SetPrivateAttr("ts_project_info", &npmPackageInfo.TsProjectInfo)
 	npmPackage.SetAttr("srcs", npmPackageInfo.sources.Values())
 	npmPackage.SetAttr("visibility", []string{npmPackageVisibility})
+
+	// For js_library package targets, propagate TypeScript source files as
+	// types so they flow through JsInfo.transitive_types to downstream
+	// ts_project targets that depend on this package.
+	if packageTargetKind == JsLibraryKind && srcRule != nil {
+		if info, ok := srcRule.PrivateAttr("ts_project_info").(*TsProjectInfo); ok {
+			var typeFiles []string
+			for it := info.sources.Iterator(); it.Next(); {
+				f := it.Value()
+				if isTranspiledSourceFileExt(path.Ext(f)) {
+					typeFiles = append(typeFiles, f)
+				}
+			}
+			if len(typeFiles) > 0 {
+				npmPackage.SetAttr("types", typeFiles)
+			}
+		}
+	}
 
 	result.Gen = append(result.Gen, npmPackage)
 	result.Imports = append(result.Imports, npmPackageInfo)

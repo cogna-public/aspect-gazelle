@@ -19,6 +19,7 @@ ts_project(
 js_library(
     name = "c",
     srcs = [],
+    types = ["index.ts"],
     visibility = ["//:__pkg__"],
     deps = [":c_lib"],
 )
