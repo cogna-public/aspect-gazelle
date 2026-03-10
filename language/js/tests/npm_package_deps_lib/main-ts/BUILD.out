@@ -12,6 +12,7 @@ ts_project(
 js_library(
     name = "pkg",
     srcs = ["package.json"],
+    types = ["start.ts"],
     visibility = ["//:__pkg__"],
     deps = [":tsc"],
 )
