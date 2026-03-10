@@ -24,8 +24,12 @@ jobs:
         run: |
           git tag "$TAG"
           git push origin "$TAG"
+          cat > /tmp/release-notes.md <<'NOTES'
+          Fork release adding types attribute support to js_library package targets.
+
+          Based on upstream 2025.40.171+aa8a243c with one additional commit:
+          feat(js): generate types attribute on js_library package targets
+          NOTES
           gh release create "$TAG" runner/assets/* \
             --title "2025.40.171-rdark.1+types" \
-            --notes "Fork release adding types attribute support to js_library package targets.
-Based on upstream 2025.40.171+aa8a243c with one additional commit:
-feat(js): generate types attribute on js_library package targets"
+            --notes-file /tmp/release-notes.md
