@@ -1,0 +1,31 @@
+name: Fork Release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: bazel-contrib/setup-bazel@0.15.0
+      - name: Build release artifacts
+        working-directory: runner
+        run: |
+          mkdir assets
+          for platform in linux_amd64_cgo linux_arm64_cgo darwin_arm64_cgo; do
+            bazel run --run_under cp --platforms="@rules_go//go/toolchain:$platform" //:gazelle_prebuilt_bin "$PWD/assets/gazelle-$platform"
+          done
+          shasum -a 256 assets/* > assets/CHECKSUMS
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: "2025.40.171-rdark.1+types"
+        run: |
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" runner/assets/* \
+            --title "2025.40.171-rdark.1+types" \
+            --notes "Fork release adding types attribute support to js_library package targets.
+Based on upstream 2025.40.171+aa8a243c with one additional commit:
+feat(js): generate types attribute on js_library package targets"
