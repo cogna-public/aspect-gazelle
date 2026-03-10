@@ -1,6 +1,15 @@
 name: Fork Release
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (branch/tag/SHA) to build from"
+        required: true
+        default: "feat/js-library-types-attribute-upstream"
+      tag:
+        description: "Release tag name"
+        required: true
+        default: "2025.40.171-cogna.2+types"
 permissions:
   contents: write
 jobs:
@@ -8,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
       - uses: bazel-contrib/setup-bazel@0.15.0
       - name: Build release artifacts
         working-directory: runner
@@ -20,16 +31,14 @@ jobs:
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: "2025.40.171-rdark.1+types"
+          TAG: ${{ inputs.tag }}
         run: |
           git tag "$TAG"
           git push origin "$TAG"
           cat > /tmp/release-notes.md <<'NOTES'
           Fork release adding types attribute support to js_library package targets.
-
-          Based on upstream 2025.40.171+aa8a243c with one additional commit:
           feat(js): generate types attribute on js_library package targets
           NOTES
           gh release create "$TAG" runner/assets/* \
-            --title "2025.40.171-rdark.1+types" \
+            --title "$TAG" \
             --notes-file /tmp/release-notes.md
