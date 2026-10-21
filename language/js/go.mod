@@ -1,6 +1,6 @@
 module github.com/aspect-build/aspect-gazelle/language/js
 
-go 1.24.5
+go 1.26.10
 
 replace github.com/aspect-build/aspect-gazelle/common => ../../common
 
